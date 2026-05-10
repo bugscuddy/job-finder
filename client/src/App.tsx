@@ -1,47 +1,61 @@
-import { useState } from 'react'
-import ResumeUpload from './components/ResumeUpload'
-import JobResults from './components/JobResults'
+import { useState, useEffect } from 'react'
+import Sidebar from './components/Sidebar'
+import ChatArea from './components/ChatArea'
 import Settings from './components/Settings'
-import { Briefcase, Settings as SettingsIcon } from 'lucide-react'
+
+interface Conversation {
+  id: string
+  title: string
+  timestamp: Date
+}
 
 function App() {
   const [showSettings, setShowSettings] = useState(false)
-  const [jobs, setJobs] = useState<any[] | null>(null)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
 
-  const handleJobsFound = (foundJobs: any[]) => {
-    setJobs(foundJobs)
+  useEffect(() => {
+    const savedConversations = localStorage.getItem('job-finder-conversations')
+    if (savedConversations) {
+      const parsed = JSON.parse(savedConversations)
+      setConversations(parsed)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (conversations.length > 0) {
+      localStorage.setItem('job-finder-conversations', JSON.stringify(conversations))
+    }
+  }, [conversations])
+
+  const handleNewChat = () => {
+    const newConversation: Conversation = {
+      id: Date.now().toString(),
+      title: 'New conversation',
+      timestamp: new Date()
+    }
+    setConversations(prev => [newConversation, ...prev])
+    setCurrentConversationId(newConversation.id)
   }
 
-  const handleBackToUpload = () => {
-    setJobs(null)
+  const handleSelectConversation = (id: string) => {
+    setCurrentConversationId(id)
+  }
+
+  const handleOpenSettings = () => {
+    setShowSettings(true)
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      <header className="border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Briefcase className="w-8 h-8 text-blue-500" />
-            Job Finder
-          </h1>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition"
-          >
-            <SettingsIcon className="w-5 h-5" />
-            Settings
-          </button>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto p-4">
-        {jobs ? (
-          <JobResults jobs={jobs} onBack={handleBackToUpload} />
-        ) : (
-          <ResumeUpload onJobsFound={handleJobsFound} />
-        )}
-      </main>
-
+    <div className="flex h-screen bg-[#212121] text-white">
+      <Sidebar
+        onNewChat={handleNewChat}
+        onSelectConversation={handleSelectConversation}
+        onOpenSettings={handleOpenSettings}
+        currentConversationId={currentConversationId}
+        conversations={conversations}
+      />
+      <ChatArea conversationId={currentConversationId} />
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
     </div>
   )
